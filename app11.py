@@ -6,6 +6,7 @@ import streamlit as st
 import pandas as pd
 import json
 import os
+import plotly.express as px
 from dotenv import load_dotenv
 from functools import lru_cache
 
@@ -76,12 +77,10 @@ def prepare_dataframe_for_prompt(df: pd.DataFrame, max_rows: int = MAX_ROWS_FOR_
     - Метаинформация о датасете
     - Ограниченное количество строк для экономии токенов
     """
-    # Статистика по числовым колонкам
     numeric_stats = ""
     if len(df.select_dtypes(include='number').columns) > 0:
         numeric_stats = df.select_dtypes(include='number').describe().to_string()
     
-    # Первые строки данных
     sample_rows = df.head(max_rows).to_string()
     
     return f"""
@@ -133,7 +132,8 @@ def main():
         user_request = st.text_area(
             "Запрос к ИИ-агенту",
             placeholder="Например: Найди корреляции между переменными или выдели основные тренды",
-            height=100
+            height=100,
+            key="user_request_area"
         )
 
     uploaded_file = st.file_uploader("Загрузите файл", type=["csv", "xlsx", "xls"])
@@ -173,21 +173,112 @@ def main():
         st.subheader("Превью данных")
         st.dataframe(df.head(10))
         
-        st.subheader("AI-Анализ")
+        # ========================
+        # 📊 Блок визуализации (РАБОТАЕТ СРАЗУ ПОСЛЕ ЗАГРУЗКИ ФАЙЛА)
+        # ========================
+        st.subheader("📈 Визуализация данных")
         
-        # Значение по умолчанию для запроса
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        
+        if len(numeric_cols) >= 1:
+            chart_type = st.selectbox(
+                "Тип визуализации", 
+                ["📊 Гистограмма", "🔗 Корреляционная матрица", "📈 Scatter plot", "📦 Box plot"],
+                key="chart_type_selector"
+            )
+            
+            # Сэмплирование для больших датасетов (ускорение отрисовки)
+            plot_df = df if len(df) <= 10000 else df.sample(n=10000, random_state=42)
+            
+            fig = None  # Инициализация для избежания NameError
+            
+            if chart_type == "📊 Гистограмма":
+                chart_col = st.selectbox("Выберите колонку для распределения", numeric_cols, key="hist_col")
+                fig = px.histogram(
+                    plot_df, x=chart_col, 
+                    title=f"Распределение: {chart_col}",
+                    nbins=30,
+                    color_discrete_sequence=["#636EFA"]
+                )
+                fig.update_layout(hovermode="x unified")
+                
+            elif chart_type == "🔗 Корреляционная матрица" and len(numeric_cols) >= 2:
+                corr_matrix = plot_df[numeric_cols].corr(numeric_only=True)
+                fig = px.imshow(
+                    corr_matrix, 
+                    text_auto=".2f", 
+                    title="Корреляционная матрица (Пирсон)",
+                    color_continuous_scale="RdBu_r",
+                    aspect="auto"
+                )
+                fig.update_layout(height=600)
+                
+            elif chart_type == "📈 Scatter plot" and len(numeric_cols) >= 2:
+                col_x, col_y = st.columns(2)
+                with col_x:
+                    x_col = st.selectbox("Ось X", numeric_cols, key="scatter_x")
+                with col_y:
+                    y_col = st.selectbox("Ось Y", numeric_cols, key="scatter_y")
+                
+                cat_cols = plot_df.select_dtypes(include=['object', 'category']).columns.tolist()
+                color_col = st.selectbox("Цвет (опционально)", ["None"] + cat_cols, key="scatter_color")
+                color_arg = None if color_col == "None" else color_col
+                
+                fig = px.scatter(
+                    plot_df, x=x_col, y=y_col, color=color_arg,
+                    title=f"{y_col} vs {x_col}",
+                    hover_data=plot_df.columns.tolist(),
+                    opacity=0.7
+                )
+                
+            elif chart_type == "📦 Box plot":
+                box_col = st.selectbox("Выберите колонку для box plot", numeric_cols, key="box_col")
+                cat_cols = plot_df.select_dtypes(include=['object', 'category']).columns.tolist()
+                group_col = st.selectbox("Группировка (опционально)", ["None"] + cat_cols, key="box_group")
+                x_arg = None if group_col == "None" else group_col
+                
+                fig = px.box(
+                    plot_df, x=x_arg, y=box_col, 
+                    title=f"Box plot: {box_col}" + (f" (по {group_col})" if x_arg else ""),
+                    points="outliers"
+                )
+            
+            # Отображение графика и экспорт
+            if fig is not None:
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Кнопка экспорта (внутри проверки на fig)
+                if st.button("💾 Экспортировать график как PNG", key="export_btn"):
+                    try:
+                        fig.write_image("chart_export.png")  # Требуется: pip install -U kaleido
+                        with open("chart_export.png", "rb") as f:
+                            st.download_button(
+                                label="📥 Скачать PNG",
+                                data=f.read(),
+                                file_name="analytics_chart.png",
+                                mime="image/png",
+                                key="download_btn"
+                            )
+                    except Exception as e:
+                        st.warning(f"Для экспорта установите kaleido: `pip install -U kaleido`\nОшибка: {e}")
+        else:
+            st.info("ℹ️ В датасете нет числовых колонок для визуализации")
+        
+        # ========================
+        # 🤖 Блок AI-анализа
+        # ========================
+        st.subheader("🤖 AI-Анализ")
+        
         if not user_request.strip():
             user_request = (
                 "Проведи анализ данных: выдели ключевые метрики, "
                 "закономерности, аномалии и дай практические рекомендации."
             )
 
-        # Проверка безопасности запроса
         if not validate_request_safety(user_request):
-            st.warning("Обнаружена потенциально опасная конструкция в запросе. Запрос отклонён.")
+            st.warning("⚠️ Обнаружена потенциально опасная конструкция в запросе. Запрос отклонён.")
             st.stop()
 
-        # Подготовка промпта
         data_context = prepare_dataframe_for_prompt(df)
         
         prompt_text = f"""Ты — профессиональный аналитик данных. Отвечай строго по делу, на русском языке.
@@ -209,13 +300,11 @@ def main():
 4. Если для ответа не хватает информации — укажи это явно.
 """
 
-        if st.button("Получить анализ"):
-            with st.spinner("Обработка запроса..."):
+        if st.button("🔍 Получить анализ от агента", key="analyze_btn"):
+            with st.spinner("Агент анализирует данные..."):
                 try:
-                    # Получение токена (с кэшированием)
                     access_token = get_gigachat_access_token(api_key)
                     
-                    # Запрос к чат-API
                     headers_chat = {
                         "Content-Type": "application/json",
                         "Authorization": f"Bearer {access_token}",
@@ -236,7 +325,7 @@ def main():
                             },
                             {"role": "user", "content": prompt_text}
                         ],
-                        "temperature": 0.3,  # Снижена для более точных аналитических ответов
+                        "temperature": 0.3,
                         "max_tokens": 4000
                     }
 
@@ -251,8 +340,7 @@ def main():
                     if response_chat.status_code == 200:
                         result_data = response_chat.json()
                         ai_text = result_data['choices'][0]['message']['content']
-                        
-                        st.markdown("Отчёт от ИИ-агента:")
+                        st.markdown("### 📝 Отчёт от ИИ-агента:")
                         st.markdown(ai_text)
                     else:
                         st.error(
@@ -261,18 +349,18 @@ def main():
                         )
                         
                 except requests.exceptions.Timeout:
-                    st.error("Превышено время ожидания ответа от сервиса. Попробуйте ещё раз.")
+                    st.error("⏱️ Превышено время ожидания ответа от сервиса. Попробуйте ещё раз.")
                 except requests.exceptions.ConnectionError:
-                    st.error("Не удалось подключиться к сервису. Проверьте сетевое соединение.")
+                    st.error("🔌 Не удалось подключиться к сервису. Проверьте сетевое соединение.")
                 except Exception as e:
-                    st.error(f"Произошла ошибка: {type(e).__name__}: {e}")
+                    st.error(f"❌ Произошла ошибка: {type(e).__name__}: {e}")
 
     except pd.errors.EmptyDataError:
-        st.error("Файл пуст или имеет неверный формат")
+        st.error("📄 Файл пуст или имеет неверный формат")
     except pd.errors.ParserError:
-        st.error("Ошибка парсинга файла. Проверьте корректность формата")
+        st.error("🔧 Ошибка парсинга файла. Проверьте корректность формата")
     except Exception as e:
-        st.error(f"Ошибка обработки файла: {type(e).__name__}: {e}")
+        st.error(f"💥 Ошибка обработки файла: {type(e).__name__}: {e}")
 
 
 if __name__ == "__main__":
