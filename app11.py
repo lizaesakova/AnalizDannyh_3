@@ -173,9 +173,6 @@ def main():
         st.subheader("Превью данных")
         st.dataframe(df.head(10))
         
-        # ========================
-        # 📊 Блок визуализации (РАБОТАЕТ СРАЗУ ПОСЛЕ ЗАГРУЗКИ ФАЙЛА)
-        # ========================
         st.subheader("📈 Визуализация данных")
         
         numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
