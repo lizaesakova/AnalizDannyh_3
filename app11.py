@@ -180,7 +180,7 @@ def main():
         if len(numeric_cols) >= 1:
             chart_type = st.selectbox(
                 "Тип визуализации", 
-                ["📊 Гистограмма", "🔗 Корреляционная матрица", "📈 Scatter plot", "📦 Box plot"],
+                [" Гистограмма", " Корреляционная матрица", " Scatter plot", " Box plot"],
                 key="chart_type_selector"
             )
             
@@ -189,7 +189,7 @@ def main():
             
             fig = None  # Инициализация для избежания NameError
             
-            if chart_type == "📊 Гистограмма":
+            if chart_type == " Гистограмма":
                 chart_col = st.selectbox("Выберите колонку для распределения", numeric_cols, key="hist_col")
                 fig = px.histogram(
                     plot_df, x=chart_col, 
@@ -199,7 +199,7 @@ def main():
                 )
                 fig.update_layout(hovermode="x unified")
                 
-            elif chart_type == "🔗 Корреляционная матрица" and len(numeric_cols) >= 2:
+            elif chart_type == " Корреляционная матрица" and len(numeric_cols) >= 2:
                 corr_matrix = plot_df[numeric_cols].corr(numeric_only=True)
                 fig = px.imshow(
                     corr_matrix, 
@@ -210,7 +210,7 @@ def main():
                 )
                 fig.update_layout(height=600)
                 
-            elif chart_type == "📈 Scatter plot" and len(numeric_cols) >= 2:
+            elif chart_type == " Scatter plot" and len(numeric_cols) >= 2:
                 col_x, col_y = st.columns(2)
                 with col_x:
                     x_col = st.selectbox("Ось X", numeric_cols, key="scatter_x")
@@ -228,7 +228,7 @@ def main():
                     opacity=0.7
                 )
                 
-            elif chart_type == "📦 Box plot":
+            elif chart_type == " Box plot":
                 box_col = st.selectbox("Выберите колонку для box plot", numeric_cols, key="box_col")
                 cat_cols = plot_df.select_dtypes(include=['object', 'category']).columns.tolist()
                 group_col = st.selectbox("Группировка (опционально)", ["None"] + cat_cols, key="box_group")
@@ -245,12 +245,12 @@ def main():
                 st.plotly_chart(fig, use_container_width=True)
                 
                 # Кнопка экспорта (внутри проверки на fig)
-                if st.button("💾 Экспортировать график как PNG", key="export_btn"):
+                if st.button(" Экспортировать график как PNG", key="export_btn"):
                     try:
                         fig.write_image("chart_export.png")  # Требуется: pip install -U kaleido
                         with open("chart_export.png", "rb") as f:
                             st.download_button(
-                                label="📥 Скачать PNG",
+                                label=" Скачать PNG",
                                 data=f.read(),
                                 file_name="analytics_chart.png",
                                 mime="image/png",
@@ -259,12 +259,9 @@ def main():
                     except Exception as e:
                         st.warning(f"Для экспорта установите kaleido: `pip install -U kaleido`\nОшибка: {e}")
         else:
-            st.info("ℹ️ В датасете нет числовых колонок для визуализации")
+            st.info(" В датасете нет числовых колонок для визуализации")
         
-        # ========================
-        # 🤖 Блок AI-анализа
-        # ========================
-        st.subheader("🤖 AI-Анализ")
+        st.subheader(" AI-Анализ")
         
         if not user_request.strip():
             user_request = (
@@ -337,7 +334,7 @@ def main():
                     if response_chat.status_code == 200:
                         result_data = response_chat.json()
                         ai_text = result_data['choices'][0]['message']['content']
-                        st.markdown("### 📝 Отчёт от ИИ-агента:")
+                        st.markdown("###  Отчёт от ИИ-агента:")
                         st.markdown(ai_text)
                     else:
                         st.error(
@@ -346,18 +343,18 @@ def main():
                         )
                         
                 except requests.exceptions.Timeout:
-                    st.error("⏱️ Превышено время ожидания ответа от сервиса. Попробуйте ещё раз.")
+                    st.error(" Превышено время ожидания ответа от сервиса. Попробуйте ещё раз.")
                 except requests.exceptions.ConnectionError:
-                    st.error("🔌 Не удалось подключиться к сервису. Проверьте сетевое соединение.")
+                    st.error(" Не удалось подключиться к сервису. Проверьте сетевое соединение.")
                 except Exception as e:
                     st.error(f"❌ Произошла ошибка: {type(e).__name__}: {e}")
 
     except pd.errors.EmptyDataError:
-        st.error("📄 Файл пуст или имеет неверный формат")
+        st.error(" Файл пуст или имеет неверный формат")
     except pd.errors.ParserError:
-        st.error("🔧 Ошибка парсинга файла. Проверьте корректность формата")
+        st.error(" Ошибка парсинга файла. Проверьте корректность формата")
     except Exception as e:
-        st.error(f"💥 Ошибка обработки файла: {type(e).__name__}: {e}")
+        st.error(f" Ошибка обработки файла: {type(e).__name__}: {e}")
 
 
 if __name__ == "__main__":
