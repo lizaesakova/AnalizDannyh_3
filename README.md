@@ -17,12 +17,12 @@
 
 ### Требования
 Python 3.9+
-├── Streamlit — веб-интерфейс
-├── Pandas / NumPy — обработка данных
-├── Plotly Express — интерактивные графики
-├── Requests / urllib3 — HTTP-запросы к API
-├── python-dotenv — управление переменными окружения
-└── agent_loop — модуль ИИ-агента (кастомный)
+ - ├── Streamlit — веб-интерфейс
+ - ├── Pandas / NumPy — обработка данных
+ - ├── Plotly Express — интерактивные графики
+ - ├── Requests / urllib3 — HTTP-запросы к API
+ - ├── python-dotenv — управление переменными окружения
+ - └── agent_loop — модуль ИИ-агента (кастомный)
 
 
 
