@@ -12,12 +12,10 @@ import json
 from dotenv import load_dotenv
 from agent_loop import DataAnalysisAgent
 
-# ==========================================
-# 1. КОНФИГУРАЦИЯ И БЕЗОПАСНОСТЬ
-# ==========================================
+# 1. Безопасность
+
 load_dotenv()
 
-# Отключение проверки SSL ТОЛЬКО для локальной разработки
 try:
     _create_unverified_https_context = ssl._create_unverified_context
 except AttributeError:
@@ -35,9 +33,8 @@ MAX_FILE_SIZE_MB = 50
 GIGACHAT_TOKEN_URL = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
 GIGACHAT_CHAT_URL = "https://gigachat.devices.sberbank.ru/api/v1/chat/completions"
 
-# ==========================================
-# 2. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-# ==========================================
+# 2. Доп функции
+
 def validate_request_safety(user_input: str) -> bool:
     """Базовая проверка запроса на опасные паттерны"""
     forbidden_patterns = [
@@ -47,9 +44,8 @@ def validate_request_safety(user_input: str) -> bool:
     cleaned = user_input.lower()
     return not any(pattern in cleaned for pattern in forbidden_patterns)
 
-# ==========================================
-# 3. ОСНОВНОЕ ПРИЛОЖЕНИЕ
-# ==========================================
+# 3. Основной код
+
 def main():
     st.title("Analiz Dannih Esakova")
     st.markdown("Загрузите файл и задайте вопрос — нейросеть проанализирует данные как агент с доступом к инструментам.")
@@ -107,7 +103,7 @@ def main():
         st.dataframe(df.head(10), use_container_width=True)
         
         # ==========================================
-        # ВИЗУАЛИЗАЦИЯ
+        # Графики
         # ==========================================
         st.subheader("📈 Визуализация данных")
         numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
@@ -152,7 +148,7 @@ def main():
             st.info("️ В датасете нет числовых колонок для визуализации")
         
         # ==========================================
-        # АГЕНТНЫЙ АНАЛИЗ
+        # Агентный анализ
         # ==========================================
         st.divider()
         st.subheader("🤖 AI-Агент с инструментами")
