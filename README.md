@@ -45,7 +45,7 @@ pip install -r requirements.txt
 ## Как работает код:
 
  - Запуск → main.py загружает DataFrame → создаёт DataAnalysisAgent (из agent_loop.py), передавая данные и API-ключ.
- - Запрос к LLM → Агент формирует промпт с контекстом → отправляет запрос в GigaChat API.
+ - Запрос к LLM → main.py формирует компактный контекст данных и передаёт его в agent.run() → Агент объединяет контекст с запросом пользователя и отправляет в GigaChat API.
  - Парсинг ответа → Если LLM возвращает JSON-вызов инструмента, agent_loop.py извлекает его методом _parse_tool_call_from_text().
  - Выполнение инструмента → Агент вызывает self.tools.execute() (из agent_tools.py).
  - Безопасное исполнение → agent_tools.py запускает код в песочнице (sanitize_code + safe_execution_environment + таймаут) → возвращает структурированный результат.
